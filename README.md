@@ -3,9 +3,7 @@
 Convert GE MUSE XML electrocardiogram files to DICOM 12-Lead ECG Waveform Storage.
 
 This is the implementation reported in *ECG2DCM: An open-source framework for converting
-GE MUSE XML electrocardiogram data to DICOM* (Computer Methods and Programs in Biomedicine,
-manuscript CMPB-D-25-07854). Release **v1.2.0** corresponds to the results in that paper.
-
+GE MUSE XML electrocardiogram data to DICOM*
 ```
 pip install ecg2dcm
 ecg2dcm --help
