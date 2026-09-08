@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils import get_all_files, get_all_files_recursive, set_dcm_save_path, read_dicom, save_mrn_map_table
 from ecg_dcm_metadata import *
-from xml2dcm.ecg_dcm_metadata import CID_3001_ECG_LEAD
+from ecg2dcm.ecg_dcm_metadata import CID_3001_ECG_LEAD
 
 
 class XMLFile:
@@ -387,7 +387,7 @@ class XMLFile:
         analysis_software_version = self.safe_find_text(self.test_info, 'AnalysisSoftwareVersion')
         acquisition_software_version = acquisition_software_version if acquisition_software_version is not None else ''
         analysis_software_version = analysis_software_version if analysis_software_version is not None else ''
-        software_version = f'{acquisition_software_version} \ {analysis_software_version}'
+        software_version = f'{acquisition_software_version} / {analysis_software_version}'
 
         data_type = self.safe_find_text(self.test_info, 'DataType')
 
@@ -865,7 +865,7 @@ def main():
     parser.add_argument('--output_dir', type=str, default='ecg_dcm', help="Directory to save DICOM files")
     parser.add_argument('--filename_pattern', type=str, required=True,
                         help="Regex pattern to extract date and sequence from XML filenames. "
-                             "ex: MUSE_(?P<examination_date>\d{8})_(?P<examination_time>\d{6})_(?P<seq>\d{5})")
+                             r"ex: MUSE_(?P<examination_date>\d{8})_(?P<examination_time>\d{6})_(?P<seq>\d{5})")
     parser.add_argument('--out_filename_pattern', type=str, required=True,
                         help="Pattern for naming output DICOM files. ex: ECG_DICOM_{examination_date}_{seq}")
 
@@ -962,7 +962,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type=str, default='ecg_dcm', help="Directory to save DICOM files")
     parser.add_argument('--filename_pattern', type=str, required=True,
                         help="Regex pattern to extract date and sequence from XML filenames. "
-                             "ex: MUSE_(?P<examination_date>\d{8})_(\d{6})_(\d{5})")
+                             r"ex: MUSE_(?P<examination_date>\d{8})_(\d{6})_(\d{5})")
     parser.add_argument('--out_filename_pattern', type=str, required=True,
                         help="Pattern for naming output DICOM files. ex: ECG_DICOM_{examination_date}_{seq}")
 

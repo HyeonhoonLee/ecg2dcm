@@ -3,13 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "XML2DCM-ECG"
+name = "ecg2dcm"
 version = "1.2.0"
 description = "Convert GE MUSE XML electrocardiogram files to DICOM 12-Lead ECG Waveform Storage"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "MedxEng", email = "eunbyul616@gmail.com" }]
+authors = [{ name = "Seoul National University Hospital" }]
+maintainers = [{ name = "Hyung-Chul Lee", email = "vital@snu.ac.kr" }]
 keywords = ["ECG", "DICOM", "GE MUSE", "electrocardiogram", "waveform", "interoperability"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -26,12 +27,12 @@ classifiers = [
 dependencies = ["pydicom==2.4.4", "numpy", "tqdm"]
 
 [project.urls]
-Homepage = "https://github.com/MedxEng/XML2DCM-ECG"
-Repository = "https://github.com/MedxEng/XML2DCM-ECG"
-Issues = "https://github.com/MedxEng/XML2DCM-ECG/issues"
+Homepage = "https://github.com/HyeonhoonLee/ecg2dcm"
+Repository = "https://github.com/HyeonhoonLee/ecg2dcm"
+Issues = "https://github.com/HyeonhoonLee/ecg2dcm/issues"
 
 [project.scripts]
-xml2dcm-ecg = "xml2dcm.main:main"
+ecg2dcm = "ecg2dcm.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["xml2dcm"]
+packages = ["ecg2dcm"]

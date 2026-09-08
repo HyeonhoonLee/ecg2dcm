@@ -1,4 +1,30 @@
-# XML2DCM-ECG
+# ECG2DCM
+
+Convert GE MUSE XML electrocardiogram files to DICOM 12-Lead ECG Waveform Storage.
+
+This is the implementation reported in *ECG2DCM: An open-source framework for converting
+GE MUSE XML electrocardiogram data to DICOM* (Computer Methods and Programs in Biomedicine,
+manuscript CMPB-D-25-07854). Release **v1.2.0** corresponds to the results in that paper.
+
+```
+pip install ecg2dcm
+ecg2dcm --help
+```
+
+Requires Python 3.10 or later. Licensed under the MIT License.
+
+Derived from the earlier `ecg2dcm` package (v1.1.10). Version 1.2.0 corrects the DICOM
+coding of lead identifiers, filter settings and measurement units, writes the multiplex group
+label, derives the limb leads for both waveform groups, and refuses records whose acquisition
+instant cannot be recovered rather than writing an invalid Type 1 value. See the release notes.
+
+**Before production use, replace the UID root.** `ecg2dcm/ecg_dcm_metadata.py` issues Study,
+Series and SOP Instance UIDs under a neutral placeholder root; it must be your organisation's
+own registered OID.
+
+---
+
+# ecg2dcm
 
 ## Description
 
@@ -18,7 +44,7 @@ demographics.
    ```
    bash
    
-   git clone https://github.com/MedxEng/XML2DCM-ECG.git
+   git clone https://github.com/HyeonhoonLee/ecg2dcm.git
    ```
 
 2. Install the required Python packages using the following command:
