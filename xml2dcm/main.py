@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils import get_all_files, get_all_files_recursive, set_dcm_save_path, read_dicom, save_mrn_map_table
 from ecg_dcm_metadata import *
+from xml2dcm.ecg_dcm_metadata import CID_3001_ECG_LEAD
 
 
 class XMLFile:
@@ -83,6 +84,9 @@ class XMLFile:
 
     @staticmethod
     def safe_find_text(element, path):
+        # FIX: guard the element itself, not only the lookup result.
+        if element is None:
+            return None
         found = element.find(path)
         return found.text if found is not None else None
 
@@ -150,6 +154,7 @@ class XMLFile:
 
             high_pass_filter = str(float(self.safe_find_text(info, 'HighPassFilter')))
             low_pass_filter = str(float(self.safe_find_text(info, 'LowPassFilter')))
+            notch_filter = self.safe_find_text(info, 'ACFilter')  # FIX: capture AC filter
 
             if lead_cnt == 0:
                 # Waveform Sequence/Channel Definition Sequence/Channel Sensitivity Correction Factor
@@ -169,7 +174,7 @@ class XMLFile:
                                         num_waveform_channels=num_waveform_channels,
                                         num_waveform_samples=sample_count)
 
-                multiplex_group_label = self.safe_find_text(lead, 'WaveformType')
+                multiplex_group_label = self.safe_find_text(info, 'WaveformType')  # FIX: WaveformType is a child of <Waveform>, not <LeadData>
                 channel_sample_skew = self.safe_find_text(lead, 'LeadOffsetFirstSample')
 
                 if target == 'cycle':
@@ -182,7 +187,8 @@ class XMLFile:
                                                                      lowpass_filter=low_pass_filter,
                                                                      highpass_filter=high_pass_filter,
                                                                      sensitivity_correction_factor=sensitivity_correction_factor,
-                                                                     skew=channel_sample_skew)
+                                                                     skew=channel_sample_skew,
+                                                               notch_filter=notch_filter)
 
                     self.waveform_sequence_cycle = replace(self.waveform_sequence_cycle,
                                                            originality='DERIVED',
@@ -201,7 +207,8 @@ class XMLFile:
                                                                lowpass_filter=low_pass_filter,
                                                                highpass_filter=high_pass_filter,
                                                                sensitivity_correction_factor=sensitivity_correction_factor,
-                                                               skew=channel_sample_skew)
+                                                               skew=channel_sample_skew,
+                                                               notch_filter=notch_filter)
 
                     self.waveform_sequence = replace(self.waveform_sequence,
                                                      originality='ORIGINAL',
@@ -227,7 +234,12 @@ class XMLFile:
             self.waveform_sequence = replace(self.waveform_sequence,
                                              num_channels=len(self.lead_data.keys()))
         else:
-            self.lead_cycle_data = lead_data
+            # FIX: derive the limb leads for the median group as well. The median
+            # beat is a representative complex over the same eight stored leads,
+            # and III, aVR, aVL and aVF follow from I and II by the same linear
+            # combinations, so both multiplex groups carry the same twelve
+            # channels instead of twelve and eight.
+            self.lead_cycle_data = compute_derived_leads(lead_data)
             self.waveform_sequence_cycle = replace(self.waveform_sequence_cycle,
                                                    num_channels=len(self.lead_cycle_data.keys()))
 
@@ -331,10 +343,17 @@ class XMLFile:
             Returns:
                 str: Reformatted date string (YYYYMMDD) or '000000' if anonymized.
             """
-            reformat = datetime.strptime(date_str, '%m-%d-%Y').strftime('%Y%m%d') if date_str is not None else None
+            # FIX: masked or malformed dates must not abort the whole file.
+            try:
+                reformat = datetime.strptime(date_str, '%m-%d-%Y').strftime('%Y%m%d') if date_str is not None else None
+            except (ValueError, TypeError):
+                return None
             if not self.load_raw:
-                # replace date information of reformat with zeros
-                reformat = reformat[:6] + '01' if reformat is not None else '000000'
+                # De-identification masks the day to the first of the month. A
+                # record with no parseable date stays None so that the caller can
+                # refuse it: '000000' is not a valid DA value, and writing it
+                # produces an object that fails validation on a Type 1 attribute.
+                reformat = reformat[:6] + '01' if reformat is not None else None
 
             return reformat
 
@@ -512,6 +531,21 @@ class XMLFile:
         self.collate_attr_dict()
 
     def collate_attr_dict(self):
+        # FIX: Content Date (0008,0023) and Acquisition DateTime (0008,002A) are Type 1 in the
+        # 12-Lead ECG IOD. If the source date/time cannot be parsed (for example because the
+        # publisher masked it), refuse the record with a stated reason rather than emitting a
+        # non-conformant object with those attributes absent.
+        if self.test_data.acquisition_date is None or self.test_data.acquisition_time is None:
+            raise ValueError(
+                'unparsable acquisition date/time in source XML; Type 1 attributes '
+                '(0008,0023) and (0008,002A) cannot be populated')
+        # Content Date is Type 1 and <EditDate> is not always present. Falling back
+        # to the acquisition instant is a defined substitution, not a guess.
+        if self.test_data.content_date is None:
+            self.test_data = replace(self.test_data,
+                                     content_date=self.test_data.acquisition_date,
+                                     content_time=self.test_data.content_time
+                                     or self.test_data.acquisition_time)
         """
         Organizes extracted attributes into a structured dictionary for further processing.
         """
@@ -561,6 +595,15 @@ class XMLFile:
         }
 
 
+def _hundredths_to_hz(value):
+    """GE MUSE <HighPassFilter> is expressed in hundredths of a hertz (MUSE NX XML
+    Developer Guide 2102027-228A). Convert to hertz for DICOM (003A,0220)."""
+    try:
+        return str(float(value) / 100.0)
+    except (TypeError, ValueError):
+        return value
+
+
 def create_waveform_sequence_item(waveform_meta, lead_data, channel_def_seq):
     """
         Creates a single DICOM Waveform Sequence Item from the provided waveform metadata,
@@ -583,6 +626,9 @@ def create_waveform_sequence_item(waveform_meta, lead_data, channel_def_seq):
     waveform_sequence_item.SamplingFrequency = waveform_meta.sampling_frequency
     waveform_sequence_item.WaveformBitsAllocated = waveform_meta.bits_allocated
     waveform_sequence_item.WaveformSampleInterpretation = waveform_meta.sample_interpretation
+    # FIX: (003A,0020) Multiplex Group Label was never written
+    if getattr(waveform_meta, 'multiplex_group_label', None):
+        waveform_sequence_item.MultiplexGroupLabel = waveform_meta.multiplex_group_label
 
     waveform_array = np.array(list(lead_data.values()), dtype=np.int16).T
     waveform_sequence_item.WaveformData = waveform_array.tobytes()
@@ -599,10 +645,16 @@ def create_waveform_sequence_item(waveform_meta, lead_data, channel_def_seq):
         channel_def.WaveformBitsStored = channel_def_seq.bits_stored
         # **(3A, 0212) Channel Sensitivity Correction Factor
         channel_def.ChannelSensitivityCorrectionFactor = channel_def_seq.sensitivity_correction_factor
+        # FIX: DICOM (003A,0220) Filter Low Frequency is the LOWER edge of the pass band,
+        # i.e. the high-pass cutoff; (003A,0221) is the UPPER edge, i.e. the low-pass cutoff.
+        # GE MUSE records <HighPassFilter> in hundredths of a hertz and <LowPassFilter> in hertz.
         # **(003A, 0220) Filter Low Frequency
-        channel_def.FilterLowFrequency = channel_def_seq.lowpass_filter
+        channel_def.FilterLowFrequency = _hundredths_to_hz(channel_def_seq.highpass_filter)
         # **(003A,0221) Filter High Frequency
-        channel_def.FilterHighFrequency = channel_def_seq.highpass_filter
+        channel_def.FilterHighFrequency = channel_def_seq.lowpass_filter
+        # **(003A,0222) Notch Filter Frequency
+        if getattr(channel_def_seq, 'notch_filter', None) not in (None, '', 'NONE'):
+            channel_def.NotchFilterFrequency = channel_def_seq.notch_filter
         # **(003A,0213) Channel Baseline
         channel_def.ChannelBaseline = channel_def_seq.channel_baseline
 
@@ -610,11 +662,14 @@ def create_waveform_sequence_item(waveform_meta, lead_data, channel_def_seq):
         channel_def.ChannelSourceSequence = [Dataset()]
         source = channel_def.ChannelSourceSequence[0]
         # ***(0008, 0100) Code Value
-        source.CodeValue = k
+        # FIX: Channel Source Sequence must use CID 3001 "ECG Lead" (ISO/IEEE 11073-10101,
+        # designator MDC). Previously the raw MUSE LeadID string was written with LOINC.
+        _code, _meaning = CID_3001_ECG_LEAD.get(k, (k, ' '.join(['Lead', k])))
+        source.CodeValue = _code
         # ***(0008, 0102) Coding Scheme Designator
-        source.CodingSchemeDesignator = channel_def_seq.source_sequence.scheme_designator
+        source.CodingSchemeDesignator = 'MDC' if k in CID_3001_ECG_LEAD else channel_def_seq.source_sequence.scheme_designator
         # ***(0008, 0104) Code Meaning
-        source.CodeMeaning = ' '.join(['Lead', k])
+        source.CodeMeaning = _meaning
 
         # **(003A, 0211) Channel Sensitivity Units Sequence
         channel_def.ChannelSensitivityUnitsSequence = [Dataset()]
