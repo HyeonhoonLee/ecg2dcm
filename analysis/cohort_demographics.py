@@ -3,8 +3,8 @@
 
 Reads only the header of each XML entry (the demographics sit before the
 waveform payload), windows on the acquisition month, and prints aggregate
-counts. Sex and race are counted per patient (first record seen decides), age
-is summarized per record and per patient, location per record. No identifier
+counts. Sex and race are counted per record and per patient (first record seen
+decides), age is summarized per record and per patient, location per record. No identifier
 is written anywhere.
 
     uv run cohort_demographics.py --zip export.zip --since 2010-01 --until 2020-12
@@ -33,7 +33,7 @@ def main():
 
     n = 0; skipped = 0
     sex_by_patient = {}; race_by_patient = {}; age_by_patient = {}
-    ages = []; loc = collections.Counter(); sex_rec = collections.Counter()
+    ages = []; loc = collections.Counter(); sex_rec = collections.Counter(); race_rec = collections.Counter()
     with zipfile.ZipFile(a.zip_path) as z:
         names = [x for x in z.namelist() if x.lower().endswith('.xml')]
         for i, name in enumerate(names):
@@ -55,6 +55,7 @@ def main():
             except (TypeError, ValueError, KeyError):
                 age_y = None
             sex_rec[sex] += 1
+            race_rec[race.upper()] += 1
             sex_by_patient.setdefault(pid, sex); race_by_patient.setdefault(pid, race)
             if age_y is not None:
                 ages.append(age_y); age_by_patient.setdefault(pid, age_y)
@@ -66,7 +67,8 @@ def main():
         'records': n, 'skipped_outside_window': skipped, 'patients': pat,
         'sex_per_patient': dict(collections.Counter(sex_by_patient.values())),
         'sex_per_record': dict(sex_rec),
-        'race_per_patient': dict(collections.Counter(race_by_patient.values())),
+        'race_per_patient': dict(collections.Counter(v.upper() for v in race_by_patient.values())),
+        'race_per_record': dict(race_rec),
         'age_per_record': {'n': len(ages), 'mean': statistics.fmean(ages), 'sd': statistics.pstdev(ages)} if ages else None,
         'age_per_patient': {'n': len(age_by_patient), 'mean': statistics.fmean(age_by_patient.values()), 'sd': statistics.pstdev(list(age_by_patient.values()))} if age_by_patient else None,
         'location_per_record': dict(loc.most_common()),
