@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ecg2dcm"
-version = "1.2.0"
-description = "Convert GE MUSE XML electrocardiogram files to DICOM 12-Lead ECG Waveform Storage"
+version = "1.3.0"
+description = "Convert resting ECG recordings (GE MUSE XML and other formats) to DICOM General ECG Waveform Storage"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Seoul National University Hospital" }]
 maintainers = [{ name = "Hyung-Chul Lee", email = "vital@snu.ac.kr" }]
-keywords = ["ECG", "DICOM", "GE MUSE", "electrocardiogram", "waveform", "interoperability"]
+keywords = ["ECG", "DICOM", "GE MUSE", "CardioSoft", "Philips", "HL7 aECG", "WFDB", "electrocardiogram", "waveform", "interoperability"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
@@ -22,9 +22,15 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
-dependencies = ["pydicom==2.4.4", "numpy", "tqdm"]
+dependencies = ["pydicom>=2.4.4,<3", "numpy>=1.24", "tqdm>=4.60"]
+
+[project.optional-dependencies]
+philips = ["sierraecg>=0.4.0"]
+validate = ["dicom-validator>=0.6"]
+test = ["pytest>=7"]
 
 [project.urls]
 Homepage = "https://github.com/HyeonhoonLee/ecg2dcm"
@@ -33,6 +39,7 @@ Issues = "https://github.com/HyeonhoonLee/ecg2dcm/issues"
 
 [project.scripts]
 ecg2dcm = "ecg2dcm.main:main"
+ecg2dcm-convert = "ecg2dcm.convert:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ecg2dcm"]

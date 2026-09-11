@@ -1,0 +1,66 @@
+Module,DICOM Attribute,Tag,Type,Strategy,GE MUSE XML source,Notes
+Patient,Patient's Name,"(0010,0010)",2,B,PatientLastName + PatientFirstName,"family^given; replaced by 'Anonymized' under de-identification"
+Patient,Patient ID,"(0010,0020)",2,A,PatientID,"replaced by a six-digit surrogate under de-identification; the surrogate table is written next to the output"
+Patient,Patient's Sex,"(0010,0040)",2,A,Gender,"MALE -> M; FEMALE -> F; absent or other -> empty (Type 2)"
+Patient,Patient's Birth Date,"(0010,0030)",2,A,DateofBirth,"empty under de-identification"
+Patient,Ethnic Group,"(0010,2160)",3,A,Race,
+Patient Study,Patient's Age,"(0010,1010)",3,B,PatientAge + AgeUnits,"nnnY / nnnM / nnnW / nnnD"
+General Study,Study Date,"(0008,0020)",2,A,AcquisitionDate,"MM-DD-YYYY -> YYYYMMDD; day set to 01 under de-identification"
+General Study,Study Time,"(0008,0030)",2,A,AcquisitionTime,"HH:MM:SS -> HHMMSS; 000000 under de-identification"
+General Study,Referring Physician's Name,"(0008,0090)",2,B,OverreaderLastName + OverreaderFirstName,"'Anonymized' under de-identification"
+General Study,Accession Number,"(0008,0050)",2,D,,left empty (not carried by the source)
+General Study,Study Instance UID,"(0020,000D)",1,NA,,generated under the UID root: [root].[date].
+General Study,Study ID,"(0020,0010)",2,D,,generated: 16 random digits
+General Study,Study Description,"(0008,1030)",3,D,,constant '12-Lead ECG'
+General Series,Modality,"(0008,0060)",1,D,,constant 'ECG'
+General Series,Series Instance UID,"(0020,000E)",1,NA,,generated under the UID root: [root].[date].1.
+General Series,Series Number,"(0020,0011)",2,D,,index of the object within the run
+General Series,Operators' Name,"(0008,1070)",3,B,AcquisitionTechLastName + AcquisitionTechFirstName,"'Anonymized' under de-identification"
+General Equipment,Manufacturer,"(0008,0070)",2,D,,constant 'GE Healthcare' for MUSE; from the source for other formats
+General Equipment,Institution Name,"(0008,0080)",3,A,SiteName,"'Anonymized' under de-identification"
+General Equipment,Institutional Department Name,"(0008,1040)",3,A,LocationName,"'Anonymized' under de-identification"
+General Equipment,Station Name,"(0008,1010)",3,A,RoomID,"'Anonymized' under de-identification"
+General Equipment,Manufacturer's Model Name,"(0008,1090)",3,A,AcquisitionDevice,
+General Equipment,Software Versions,"(0018,1020)",3,B,AcquisitionSoftwareVersion / AnalysisSoftwareVersion,joined with ' / '
+Waveform Identification,Instance Number,"(0020,0013)",1,D,,index of the object within the run
+Waveform Identification,Content Date,"(0008,0023)",1,A,EditDate,"falls back to AcquisitionDate; day set to 01 under de-identification"
+Waveform Identification,Content Time,"(0008,0033)",1,A,EditTime,"falls back to AcquisitionTime; 000000 under de-identification"
+Waveform Identification,Acquisition DateTime,"(0008,002A)",1,B,AcquisitionDate + AcquisitionTime,"a record whose acquisition date cannot be parsed is refused, because this attribute is Type 1"
+Waveform,Waveform Sequence,"(5400,0100)",1,B,Waveform,one item per <Waveform> element: the rhythm strip and the median beat
+Waveform,Waveform Originality,"(003A,0004)",1,B,WaveformType,Rhythm -> ORIGINAL; Median -> DERIVED
+Waveform,Multiplex Group Label,"(003A,0020)",3,A,WaveformType,
+Waveform,Number of Waveform Channels,"(003A,0005)",1,B,NumberofLeads,eight stored leads plus the four derived limb leads
+Waveform,Number of Waveform Samples,"(003A,0010)",1,A,LeadData/LeadSampleCountTotal,
+Waveform,Sampling Frequency,"(003A,001A)",1,B,SampleBase x 10^SampleExponent,
+Waveform,Channel Definition Sequence,"(003A,0200)",1,B,LeadData,one item per channel
+Waveform,Channel Source Sequence / Code Value,"(0008,0100)",1C,C,LeadData/LeadID,CID 3001 ECG Lead (MDC)
+Waveform,Channel Source Sequence / Coding Scheme Designator,"(0008,0102)",1C,C,,constant 'MDC'
+Waveform,Channel Source Sequence / Code Meaning,"(0008,0104)",1,C,LeadData/LeadID,CID 3001 code meaning
+Waveform,Channel Sensitivity,"(003A,0210)",1C,D,,constant 1 (in the units below)
+Waveform,Channel Sensitivity Units Sequence,"(003A,0211)",1C,C,LeadData/LeadAmplitudeUnits,"(uV, UCUM, microvolt) from CID 82"
+Waveform,Channel Sensitivity Correction Factor,"(003A,0212)",1C,A,LeadData/LeadAmplitudeUnitsPerBit,microvolts per least significant bit
+Waveform,Channel Baseline,"(003A,0213)",1C,D,,constant 0.0
+Waveform,Channel Sample Skew,"(003A,0215)",1C,A,LeadData/LeadOffsetFirstSample,
+Waveform,Waveform Bits Stored,"(003A,021A)",1,D,,constant 16
+Waveform,Filter Low Frequency,"(003A,0220)",1C,B,HighPassFilter,lower edge of the pass band; MUSE stores it in hundredths of a hertz and it is divided by 100
+Waveform,Filter High Frequency,"(003A,0221)",1C,A,LowPassFilter,upper edge of the pass band in hertz
+Waveform,Notch Filter Frequency,"(003A,0222)",3,A,ACFilter,omitted when NONE
+Waveform,Channel Derivation Description,"(003A,020C)",3,D,,"'Derived from leads I and II' on III, aVR, aVL and aVF in both groups"
+Waveform,Waveform Bits Allocated,"(5400,1004)",1,B,LeadData/LeadSampleSize,bytes x 8 = 16
+Waveform,Waveform Sample Interpretation,"(5400,1006)",1,D,,constant 'SS'
+Waveform,Waveform Data,"(5400,1010)",1,A,LeadData/WaveFormData,base64 little-endian int16; channels interleaved
+Acquisition Context,Acquisition Context Sequence,"(0040,0555)",2,C,DataType,"TID 3401: lead system (CID 3263) and patient state (CID 3262)"
+Acquisition Context,Value Type,"(0040,A040)",1,C,,constant 'CODE'
+Acquisition Context,Concept Name Code Sequence,"(0040,A043)",1,C,,see coded_values.csv
+Acquisition Context,Concept Code Sequence,"(0040,A168)",1C,C,,see coded_values.csv
+Waveform Annotation,Waveform Annotation Sequence,"(0040,B020)",1,B,RestingECGMeasurements,present when the source carries measurements or fiducial points
+Waveform Annotation,Concept Name Code Sequence,"(0040,A043)",1C,C,,"TID 3713 measurement concepts; CID 3229 axes; CID 3335 P wave (see coded_values.csv)"
+Waveform Annotation,Numeric Value,"(0040,A30A)",3,A,"VentricularRate, AtrialRate, PRInterval, QRSDuration, QTInterval, QTCorrected, PAxis, RAxis, TAxis",
+Waveform Annotation,Measurement Units Code Sequence,"(0040,08EA)",1C,C,,"CID 82: {H.B.}/min, ms, deg"
+Waveform Annotation,Referenced Waveform Channels,"(0040,A0B0)",1,D,,"rates reference the rhythm group; intervals, QTc, axes and the P wave reference the median group"
+Waveform Annotation,Temporal Range Type,"(0040,A130)",1C,D,,'SEGMENT' for PR, QRS and QT intervals and for the P wave
+Waveform Annotation,Referenced Sample Positions,"(0040,A132)",1C,B,"POnset, POffset, QOnset, QOffset, TOffset","MUSE fiducial points are sample positions of the median beat at ECGSampleBase hertz; DICOM positions start at 1"
+Waveform Annotation,Unformatted Text Value,"(0070,0006)",1C,A,Diagnosis/DiagnosisStatement/StmtText,written only with --keep-identity because vendor interpretation text can embed reader names
+SOP Common,SOP Class UID,"(0008,0016)",1,D,,General ECG Waveform Storage 1.2.840.10008.5.1.4.1.1.9.1.2
+SOP Common,SOP Instance UID,"(0008,0018)",1,NA,,generated under the UID root: [root].[date].1.1.
+SOP Common,Specific Character Set,"(0008,0005)",1C,D,,constant 'ISO_IR 192' (UTF-8)

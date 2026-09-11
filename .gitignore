@@ -170,3 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 dist/
+
+# ecg2dcm outputs
+ecg_dcm/
+mrn_mapping_table*.json
