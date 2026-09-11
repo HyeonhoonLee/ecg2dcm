@@ -33,6 +33,7 @@ Waveform,Number of Waveform Channels,"(003A,0005)",1,B,NumberofLeads,eight store
 Waveform,Number of Waveform Samples,"(003A,0010)",1,A,LeadData/LeadSampleCountTotal,
 Waveform,Sampling Frequency,"(003A,001A)",1,B,SampleBase x 10^SampleExponent,
 Waveform,Channel Definition Sequence,"(003A,0200)",1,B,LeadData,one item per channel
+Waveform,Channel Source Sequence,"(003A,0208)",1,C,LeadData/LeadID,one item: the CID 3001 code of the lead
 Waveform,Channel Source Sequence / Code Value,"(0008,0100)",1C,C,LeadData/LeadID,CID 3001 ECG Lead (MDC)
 Waveform,Channel Source Sequence / Coding Scheme Designator,"(0008,0102)",1C,C,,constant 'MDC'
 Waveform,Channel Source Sequence / Code Meaning,"(0008,0104)",1,C,LeadData/LeadID,CID 3001 code meaning
