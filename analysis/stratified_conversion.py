@@ -379,7 +379,7 @@ def main():
         fh.write(f'Conformant (dicom-validator, 0 errors): {n_conf} ({pct(n_conf, seen)}%)\n')
         fh.write(f'All required attributes populated: {n_comp} ({pct(n_comp, seen)}%)\n')
         fh.write(f'Required attributes checked per object: {len(required)} '
-                 f'(Type 1 and Type 2 of the 12-Lead ECG IOD)\n\n')
+                 f'(Type 1 and Type 2 of the General ECG IOD)\n\n')
         fh.write(f'Device models: {len([d for d in devices if d != "(element absent)"])} named\n')
         fh.write(f'Software version pairs: {len(pairs)}\n\n')
         if fail:

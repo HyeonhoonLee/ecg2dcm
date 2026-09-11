@@ -5,7 +5,7 @@ objects: GE MUSE XML first, and also GE CardioSoft, Philips Sierra, HL7 aECG,
 Mortara ELI Link, Schiller SEMA and WFDB.
 
 This is the implementation reported in *ECG2DCM: An open-source framework for
-converting GE MUSE XML electrocardiogram data to DICOM* (Computer Methods and
+converting resting 12-lead electrocardiograms to DICOM waveform objects* (Computer Methods and
 Programs in Biomedicine, manuscript CMPB-D-25-07854). **Release v1.3.0
 corresponds to the results in that paper.** MIT License.
 
