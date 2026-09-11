@@ -13,15 +13,15 @@ Attribute,Code Value,Coding Scheme Designator,Code Meaning,Units (code),Governin
 "Channel Source Sequence (003A,0208)",2:8,MDC,Lead V6,,CID 3001,lead V6
 "Channel Sensitivity Units Sequence (003A,0211)",uV,UCUM,microvolt,,CID 82 Measurement Unit,amplitude units
 "Acquisition Context, concept name",10:11345,MDC,Lead System,,TID 3401,constant
-"Acquisition Context, concept value",10:11265,MDC,"Standard 12-lead positions, electrodes placed individually",,CID 3263 Electrode Placement Values,constant
+"Acquisition Context, concept value",10:11265,MDC,"Standard 12-lead positions, electrodes placed individually",,CID 3263 Electrode Placement Value,constant
 "Acquisition Context, concept name",109054,DCM,Patient State,,TID 3401,constant
-"Acquisition Context, concept value",128975004,SCT,Resting State,,CID 3262 ECG Patient State Values,constant
+"Acquisition Context, concept value",128975004,SCT,Resting State,,CID 3262 ECG Patient State Value,constant
 "Waveform Annotation, concept name",2:16016,MDC,Ventricular Heart Rate,{H.B.}/min,TID 3713 ECG Global Measurements,ventricular rate
 "Waveform Annotation, concept name",2:16020,MDC,Atrial Heart Rate,{H.B.}/min,TID 3713,atrial rate
 "Waveform Annotation, concept name",2:15872,MDC,PR interval global,ms,TID 3713; CID 3689 ECG Global Waveform Duration,PR interval; segment P onset to QRS onset
 "Waveform Annotation, concept name",2:16156,MDC,QRS duration global,ms,TID 3713; CID 3689,QRS duration; segment QRS onset to QRS offset
 "Waveform Annotation, concept name",2:16160,MDC,QT interval global,ms,TID 3713; CID 3689,QT interval; segment QRS onset to T offset
-"Waveform Annotation, concept name",2:15876,MDC,QTc interval global,ms,TID 3713; CID 3227 QTc Measurements,corrected QT
+"Waveform Annotation, concept name",2:15876,MDC,QTc interval global,ms,TID 3713; CID 3227 QTc Measurement,corrected QT
 "Waveform Annotation, concept name",2:16128,MDC,P Axis,deg,CID 3229 ECG Axis Measurement (TID 3713 row 12),P axis
 "Waveform Annotation, concept name",2:16132,MDC,QRS axis,deg,CID 3229,QRS (R) axis
 "Waveform Annotation, concept name",2:16136,MDC,T axis,deg,CID 3229,T axis
