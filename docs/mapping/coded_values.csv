@@ -15,7 +15,7 @@ Attribute,Code Value,Coding Scheme Designator,Code Meaning,Units (code),Governin
 "Acquisition Context, concept name",10:11345,MDC,Lead System,,TID 3401,constant
 "Acquisition Context, concept value",10:11265,MDC,"Standard 12-lead positions, electrodes placed individually",,CID 3263 Electrode Placement Value,constant
 "Acquisition Context, concept name",109054,DCM,Patient State,,TID 3401,constant
-"Acquisition Context, concept value",128975004,SCT,Resting State,,CID 3262 ECG Patient State Value,constant
+"Acquisition Context, concept value",128975004,SCT,Resting state,,CID 3262 ECG Patient State Value,constant
 "Waveform Annotation, concept name",2:16016,MDC,Ventricular Heart Rate,{H.B.}/min,TID 3713 ECG Global Measurements,ventricular rate
 "Waveform Annotation, concept name",2:16020,MDC,Atrial Heart Rate,{H.B.}/min,TID 3713,atrial rate
 "Waveform Annotation, concept name",2:15872,MDC,PR interval global,ms,TID 3713 ECG Global Measurements,PR interval; segment P onset to QRS onset
@@ -26,6 +26,6 @@ Attribute,Code Value,Coding Scheme Designator,Code Meaning,Units (code),Governin
 "Waveform Annotation, concept name",2:16132,MDC,QRS axis,deg,CID 3229,QRS (R) axis
 "Waveform Annotation, concept name",2:16136,MDC,T axis,deg,CID 3229,T axis
 "Waveform Annotation, concept name",10:256,MDC,P wave,,CID 3335 ECG Annotation,segment P onset to P offset
-"Waveform Annotation, measurement units",{H.B.}/min,UCUM,heart beats per minute,,CID 82,rates
+"Waveform Annotation, measurement units",{H.B.}/min,UCUM,BPM,,CID 82,rates
 "Waveform Annotation, measurement units",ms,UCUM,millisecond,,CID 82,intervals
 "Waveform Annotation, measurement units",deg,UCUM,degree,,CID 82,axes

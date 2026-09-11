@@ -49,14 +49,14 @@ UNIT_MICROVOLT = Code('uV', 'UCUM', 'microvolt')
 UNIT_MILLIVOLT = Code('mV', 'UCUM', 'millivolt')
 UNIT_MILLISECOND = Code('ms', 'UCUM', 'millisecond')
 UNIT_DEGREE = Code('deg', 'UCUM', 'degree')
-UNIT_BEATS_PER_MINUTE = Code('{H.B.}/min', 'UCUM', 'heart beats per minute')   # as in TID 3713
+UNIT_BEATS_PER_MINUTE = Code('{H.B.}/min', 'UCUM', 'BPM')   # UNITS = EV ({H.B.}/min, UCUM, "BPM") in TID 3713
 
 # TID 3401 "ECG Acquisition Context"
 LEAD_SYSTEM = Code('10:11345', 'MDC', 'Lead System')                              # concept name
 STANDARD_12_LEAD = Code('10:11265', 'MDC',
                         'Standard 12-lead positions, electrodes placed individually')  # CID 3263
 PATIENT_STATE = Code('109054', 'DCM', 'Patient State')                            # concept name
-RESTING_STATE = Code('128975004', 'SCT', 'Resting State')                          # CID 3262
+RESTING_STATE = Code('128975004', 'SCT', 'Resting state')                          # CID 3262
 
 # Global measurements: concept names from TID 3713 "ECG Global Measurements".
 VENTRICULAR_RATE = Code('2:16016', 'MDC', 'Ventricular Heart Rate')   # TID 3713
@@ -87,15 +87,15 @@ CODED_VALUES = [
     ('Channel Source Sequence (003A,0208)', CID_3001_ECG_LEAD['V6'], None, 'CID 3001', 'lead V6'),
     ('Channel Sensitivity Units Sequence (003A,0211)', UNIT_MICROVOLT, None, 'CID 82 Measurement Unit', 'amplitude units'),
     ('Acquisition Context, concept name', LEAD_SYSTEM, None, 'TID 3401', 'constant'),
-    ('Acquisition Context, concept value', STANDARD_12_LEAD, None, 'CID 3263 Electrode Placement Values', 'constant'),
+    ('Acquisition Context, concept value', STANDARD_12_LEAD, None, 'CID 3263 Electrode Placement Value', 'constant'),
     ('Acquisition Context, concept name', PATIENT_STATE, None, 'TID 3401', 'constant'),
-    ('Acquisition Context, concept value', RESTING_STATE, None, 'CID 3262 ECG Patient State Values', 'constant'),
+    ('Acquisition Context, concept value', RESTING_STATE, None, 'CID 3262 ECG Patient State Value', 'constant'),
     ('Waveform Annotation, concept name', VENTRICULAR_RATE, UNIT_BEATS_PER_MINUTE, 'TID 3713 ECG Global Measurements', 'ventricular rate'),
     ('Waveform Annotation, concept name', ATRIAL_RATE, UNIT_BEATS_PER_MINUTE, 'TID 3713', 'atrial rate'),
-    ('Waveform Annotation, concept name', PR_INTERVAL, UNIT_MILLISECOND, 'TID 3713; CID 3689 ECG Global Waveform Duration', 'PR interval; segment P onset to QRS onset'),
-    ('Waveform Annotation, concept name', QRS_DURATION, UNIT_MILLISECOND, 'TID 3713; CID 3689', 'QRS duration; segment QRS onset to QRS offset'),
-    ('Waveform Annotation, concept name', QT_INTERVAL, UNIT_MILLISECOND, 'TID 3713; CID 3689', 'QT interval; segment QRS onset to T offset'),
-    ('Waveform Annotation, concept name', QTC_INTERVAL, UNIT_MILLISECOND, 'TID 3713; CID 3227 QTc Measurements', 'corrected QT'),
+    ('Waveform Annotation, concept name', PR_INTERVAL, UNIT_MILLISECOND, 'TID 3713 ECG Global Measurements', 'PR interval; segment P onset to QRS onset'),
+    ('Waveform Annotation, concept name', QRS_DURATION, UNIT_MILLISECOND, 'TID 3713', 'QRS duration; segment QRS onset to QRS offset'),
+    ('Waveform Annotation, concept name', QT_INTERVAL, UNIT_MILLISECOND, 'TID 3713', 'QT interval; segment QRS onset to T offset'),
+    ('Waveform Annotation, concept name', QTC_INTERVAL, UNIT_MILLISECOND, 'TID 3713', 'corrected QT'),
     ('Waveform Annotation, concept name', P_AXIS, UNIT_DEGREE, 'CID 3229 ECG Axis Measurement (TID 3713 row 12)', 'P axis'),
     ('Waveform Annotation, concept name', QRS_AXIS, UNIT_DEGREE, 'CID 3229', 'QRS (R) axis'),
     ('Waveform Annotation, concept name', T_AXIS, UNIT_DEGREE, 'CID 3229', 'T axis'),

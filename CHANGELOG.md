@@ -2,6 +2,18 @@
 
 All notable changes to ecg2dcm. Dates are ISO 8601.
 
+## 1.3.1 - 2026-09-12
+
+Documentation and code-meaning alignment with PS3.16; no change to any code value, attribute,
+or conversion outcome. Objects written by 1.3.0 and 1.3.1 differ only in the two strings below.
+
+### Changed
+- Code meaning of the patient state (SCT 128975004) is "Resting state", as printed in CID 3262.
+- Code meaning of the rate unit ({H.B.}/min, UCUM) is "BPM", as in the UNITS constraint of TID 3713.
+- `docs/mapping/coded_values.csv` and `codes.CODED_VALUES` name the governing groups with their current PS3.16 titles
+  (CID 3262 ECG Patient State Value, CID 3263 Electrode Placement Value) and TID 3713 alone for the interval and QTc rows.
+- Example DICOM files regenerated with 1.3.1.
+
 ## 1.3.0 - 2026-09-11
 
 Corrections found during peer review of CMPB-D-25-07854, and the multi-format

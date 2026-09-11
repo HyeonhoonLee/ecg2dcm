@@ -5,9 +5,9 @@ objects: GE MUSE XML first, and also GE CardioSoft, Philips Sierra, HL7 aECG,
 Mortara ELI Link, Schiller SEMA and WFDB.
 
 This is the implementation reported in *ECG2DCM: An open-source framework for
-converting resting 12-lead electrocardiograms to DICOM waveform objects* (Computer Methods and
-Programs in Biomedicine, manuscript CMPB-D-25-07854). **Release v1.3.0
-corresponds to the results in that paper.** MIT License.
+converting resting 12-lead electrocardiograms to DICOM waveform objects*. **Release v1.3.0
+produced the results in that paper; v1.3.1 differs only in two code-meaning strings and in the
+documentation.** MIT License.
 
 ```
 pip install ecg2dcm            # add [philips] for Philips Sierra files, [validate] for dicom-validator
