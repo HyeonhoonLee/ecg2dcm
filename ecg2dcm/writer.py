@@ -3,7 +3,8 @@
 Every source format reaches DICOM through this module, so the attribute
 mapping (Tables 3 and 4 of the manuscript, ``docs/mapping/attribute_mapping.csv``),
 the coded values (:mod:`ecg2dcm.codes`) and the de-identification rules
-(``docs/deidentification.md``) are implemented exactly once.
+(``docs/deidentification.md``: the PS3.15 Basic Application Level Confidentiality
+Profile with four of its options) are implemented exactly once.
 
 Why General ECG rather than 12-Lead ECG Waveform Storage: the 12-Lead ECG IOD
 caps the number of channels across all multiplex groups at 13 (PS3.3
@@ -13,7 +14,7 @@ module table and allows up to four groups of 24 channels (A.34.4.4.2-3).
 """
 import copy
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import numpy as np
@@ -22,6 +23,7 @@ from pydicom.sequence import Sequence
 from pydicom.uid import ExplicitVRLittleEndian, PYDICOM_IMPLEMENTATION_UID, generate_uid
 
 from . import codes
+from ._version import __version__
 from .ir import EcgRecord, Measurements
 
 ANONYMIZED = 'Anonymized'
@@ -65,34 +67,57 @@ def _lo(v, n=64) -> Optional[str]:
 
 
 def _study_id() -> str:
-    """Study ID (0020,0010) is SH, at most 16 characters; generated, as in Supplementary Table 3."""
+    """Study ID (0020,0010) is SH, at most 16 characters; generated, as in Supplementary Table 5."""
     return ''.join(random.choice('0123456789') for _ in range(16))
 
 
-# --------------------------------------------------------------------------- de-identification
-def deidentify(rec: EcgRecord, patient_id: str) -> EcgRecord:
-    """Apply the rule set of Supplementary Tables 5 and 6 and return a new record.
+def _shift_date(d: str, days: int) -> str:
+    """YYYYMMDD shifted by a whole number of days (PS3.15 E.3.6, Modified Dates Option)."""
+    return (datetime.strptime(d, '%Y%m%d') + timedelta(days=days)).strftime('%Y%m%d')
 
-    Identifiers are replaced by the literal ``Anonymized``, the patient ID by
-    the caller's surrogate, dates keep year and month with the day set to 01,
-    times become 00:00:00, the birth date is dropped, and free-text diagnosis
-    statements are dropped because vendor reports can embed reader names.
+
+# --------------------------------------------------------------------------- de-identification
+def deidentify(rec: EcgRecord, patient_id: str, date_shift_days: Optional[int] = None) -> EcgRecord:
+    """Apply the de-identification rule set and return a new record.
+
+    The rules implement the Basic Application Level Confidentiality Profile of
+    DICOM PS3.15 (Table E.1-1) for the attributes of the General ECG IOD, with
+    the Clean Structured Content, Clean Descriptors, Retain Longitudinal
+    Temporal Information with Modified Dates, and Retain Patient
+    Characteristics Options; ``docs/deidentification.md`` lists every attribute
+    with its action code.
+
+    Patient ID becomes the caller's surrogate; Patient's Name and Referring
+    Physician's Name become the literal ``Anonymized`` (Z: dummy values are
+    permitted); the birth date is dropped (Z); the four Type 3 identity
+    attributes, Operators' Name, Institution Name, Institutional Department
+    Name and Station Name, are removed (X); the study description falls back
+    to the writer's fixed string (C); and the free-text diagnosis statements
+    are dropped because vendor reports can embed reader names. Dates and
+    times are either aggregated, the day set to 01 and the time to 00:00:00,
+    or, when ``date_shift_days`` is given, shifted together by that whole
+    number of days so that the intervals between a patient's records survive.
+    Sex, age and ethnic group are kept (Retain Patient Characteristics).
     """
     r = copy.copy(rec)
     r.patient_name = ANONYMIZED
     r.patient_id = patient_id
     r.birth_date = None
     r.referring_physician = ANONYMIZED
-    r.operator = ANONYMIZED
-    r.institution = ANONYMIZED
-    r.department = ANONYMIZED
-    r.station = ANONYMIZED
-    for f in ('acquisition_date', 'content_date'):
-        v = getattr(r, f)
-        if v and len(v) == 8:
-            setattr(r, f, v[:6] + '01')
-    r.acquisition_time = DEID_TIME
-    r.content_time = DEID_TIME if r.content_time else None
+    r.operator = r.institution = r.department = r.station = None
+    r.study_description = None
+    if date_shift_days is None:
+        for f in ('acquisition_date', 'content_date'):
+            v = getattr(r, f)
+            if v and len(v) == 8:
+                setattr(r, f, v[:6] + '01')
+        r.acquisition_time = DEID_TIME
+        r.content_time = DEID_TIME if r.content_time else None
+    else:
+        for f in ('acquisition_date', 'content_date'):
+            v = getattr(r, f)
+            if v and len(v) == 8:
+                setattr(r, f, _shift_date(v, int(date_shift_days)))
     r.diagnosis = []
     return r
 
@@ -235,12 +260,16 @@ def _waveform_item(w) -> Dataset:
 # --------------------------------------------------------------------------- the object
 def build(rec: EcgRecord, *, index: int = 1, deidentify_record: bool = True,
           patient_id: Optional[str] = None, uid_root: str = codes.DEFAULT_UID_ROOT,
-          study_description: Optional[str] = None) -> FileDataset:
+          study_description: Optional[str] = None,
+          date_shift_days: Optional[int] = None) -> FileDataset:
     """Return the DICOM object for one record without writing it.
 
     ``index`` numbers the object within a conversion run (Instance Number,
     Series Number, and the default de-identified Patient ID). Building without
-    writing lets a corpus be converted and validated in memory.
+    writing lets a corpus be converted and validated in memory. With
+    ``date_shift_days`` the de-identified object carries dates shifted by that
+    whole number of days instead of dates aggregated to the month; the caller
+    is responsible for using one offset per patient (:mod:`ecg2dcm.surrogates`).
     """
     if not rec.waveforms:
         raise ValueError('no waveform groups in record')
@@ -251,7 +280,8 @@ def build(rec: EcgRecord, *, index: int = 1, deidentify_record: bool = True,
         raise ValueError('unparsable acquisition date; Type 1 (0008,0023)/(0008,002A) cannot be populated')
 
     if deidentify_record:
-        rec = deidentify(rec, patient_id or f'{index:06d}')
+        rec = deidentify(rec, patient_id or f'{index:06d}', date_shift_days)
+        study_description = None      # a caller-supplied description is a descriptor too (Clean Descriptors Option)
     else:
         rec = copy.copy(rec)
         if patient_id:
@@ -286,6 +316,13 @@ def build(rec: EcgRecord, *, index: int = 1, deidentify_record: bool = True,
         ds.EthnicGroup = _lo(rec.ethnic_group, 16)
     if rec.age_value is not None:
         ds.PatientAge = f'{min(int(rec.age_value), 999):03d}{rec.age_unit or "Y"}'
+    if deidentify_record:
+        # PS3.15 E.1.1 item 6 and E.3.6: the object records the profile and options applied.
+        ds.PatientIdentityRemoved = 'YES'
+        rule = 'dates shifted per patient' if date_shift_days is not None else 'dates aggregated to month'
+        ds.DeidentificationMethod = f'ecg2dcm {__version__}: {rule}'
+        ds.DeidentificationMethodCodeSequence = Sequence([_code(c) for c in codes.DEID_METHOD_CODES])
+        ds.LongitudinalTemporalInformationModified = 'MODIFIED'
 
     # General Study
     ds.StudyInstanceUID = generate_uid(study_prefix)

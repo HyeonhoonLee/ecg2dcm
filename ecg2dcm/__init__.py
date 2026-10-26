@@ -1,5 +1,5 @@
 """ECG2DCM: convert resting ECG recordings to DICOM General ECG Waveform Storage."""
-__version__ = '1.3.1'
+from ._version import __version__                        # noqa: F401
 
 from .ir import EcgRecord, Waveform, Measurements          # noqa: F401
 from .writer import build, write, deidentify              # noqa: F401

@@ -199,7 +199,7 @@ def parse(source, acquisition_date=None, acquisition_time=None):
     raw = _read_signals(hea, signals, nsamp)
 
     rec = EcgRecord(source_format='WFDB')
-    rec.patient_id = name
+    rec.patient_id = name                # the record name, unless a header comment names the subject
     rec.acquisition_date = acquisition_date or base_date
     rec.acquisition_time = acquisition_time or base_time
     for c in comments:
@@ -209,7 +209,9 @@ def parse(source, acquisition_date=None, acquisition_time=None):
         key = key.strip().strip('<>').lower()
         val = val.strip()
         if key == 'age' and val.replace('.', '', 1).isdigit():
-            rec.age = str(int(float(val)))
+            rec.age_value = int(float(val))
+        elif key in ('subject_id', 'subject', 'patient_id', 'patient') and val:
+            rec.patient_id = val            # MIMIC-IV-ECG: '# <subject_id>: 10000032'
         elif key == 'sex':
             rec.sex = {'M': 'M', 'MALE': 'M', 'F': 'F', 'FEMALE': 'F'}.get(val.upper())
         elif key in ('dx', 'diagnoses') and val:

@@ -5,6 +5,8 @@ files, names each output from a regular expression applied to the input file
 name, de-identifies every object (see docs/deidentification.md) with one
 surrogate patient ID per source patient, and writes the surrogate table next
 to the output so that a study can link records back under its own governance.
+With ``--date-shift`` dates are shifted by one whole-day offset per patient
+instead of being aggregated to the month; the offset is kept in the same table.
 """
 import argparse
 import os
@@ -18,6 +20,7 @@ from tqdm import tqdm
 
 from . import codes
 from .adapters import muse
+from .surrogates import SurrogateTable
 from .utils import get_all_files_recursive, save_mrn_map_table, set_dcm_save_path
 from .writer import build
 
@@ -26,19 +29,19 @@ def extract_format_keys(format_string):
     return [f for _, f, _, _ in string.Formatter().parse(format_string) if f]
 
 
-def convert_one(xml_path, out_path, index, surrogates, keep_identity=False, uid_root=codes.DEFAULT_UID_ROOT):
-    """Convert one MUSE file. Returns (source patient ID, surrogate ID) or raises."""
+def convert_one(xml_path, out_path, index, table, keep_identity=False, uid_root=codes.DEFAULT_UID_ROOT):
+    """Convert one MUSE file. Returns (source patient ID, surrogate ID, date offset) or raises."""
     rec = muse.parse(xml_path)
     source_id = rec.patient_id or ''
-    surrogate = surrogates.get(source_id)
-    if surrogate is None:
-        surrogate = f'{len(surrogates) + 1:06d}'
-        surrogates[source_id] = surrogate
+    if keep_identity:
+        surrogate, offset = None, None
+    else:
+        surrogate, offset = table.lookup(source_id, f'file:{index}')
     ds = build(rec, index=index, deidentify_record=not keep_identity,
-               patient_id=None if keep_identity else surrogate, uid_root=uid_root)
+               patient_id=surrogate, uid_root=uid_root, date_shift_days=offset)
     os.makedirs(os.path.dirname(out_path) or '.', exist_ok=True)
     ds.save_as(out_path, write_like_original=False)
-    return source_id, surrogate
+    return source_id, surrogate, offset
 
 
 def run_conversion(args):
@@ -59,7 +62,8 @@ def run_conversion(args):
         print('Warning: no {seq} in the output filename pattern; "_{seq}" is appended so that files sharing a date stay distinct.')
         args.out_filename_pattern += '_{seq}'
 
-    surrogates, seq_by_date, metadata = {}, {}, {}
+    table = SurrogateTable(date_shift=bool(getattr(args, 'date_shift', False)))
+    seq_by_date = {}
     n_ok = n_fail = 0
     for i, xml in enumerate(tqdm(files), start=1):
         m = re.search(args.filename_pattern, xml)
@@ -77,8 +81,8 @@ def run_conversion(args):
             print(f'File {out_path} already exists. Skipping {xml}')
             continue
         try:
-            source_id, surrogate = convert_one(xml, out_path, i, surrogates,
-                                               keep_identity=args.keep_identity, uid_root=args.uid_root)
+            source_id, surrogate, offset = convert_one(xml, out_path, i, table,
+                                                       keep_identity=args.keep_identity, uid_root=args.uid_root)
         except Exception as e:
             n_fail += 1
             print(f'Error processing file {xml}: {e}', file=sys.stderr)
@@ -86,11 +90,11 @@ def run_conversion(args):
                 traceback.print_exc()
             continue
         n_ok += 1
-        metadata[Path(xml).name] = {'mrn': surrogate, 'original_mrn': source_id,
-                                    'ecg_dicom_file': Path(out_path).name}
+        if not args.keep_identity:
+            table.record(Path(xml).name, Path(out_path).name, source_id, surrogate, offset)
     if not args.keep_identity:
         os.makedirs(out_root, exist_ok=True)
-        save_mrn_map_table(metadata, str(out_root))
+        save_mrn_map_table(table.rows, str(out_root))
     print(f'{n_ok} converted, {n_fail} refused or failed')
     return n_ok, n_fail
 
@@ -111,6 +115,8 @@ def build_parser():
                    help='OID under which Study, Series and SOP Instance UIDs are issued (default: pydicom root, a placeholder)')
     p.add_argument('--keep-identity', dest='keep_identity', action='store_true',
                    help='do not de-identify (writes names, IDs, full timestamps and diagnosis text from the source)')
+    p.add_argument('--date-shift', dest='date_shift', action='store_true',
+                   help='de-identify dates by one whole-day offset per patient (kept in the surrogate table) instead of aggregating them to the month')
     return p
 
 

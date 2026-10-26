@@ -6,8 +6,11 @@ Mortara ELI Link, Schiller SEMA and WFDB.
 
 This is the implementation reported in *ECG2DCM: An open-source framework for
 converting resting 12-lead electrocardiograms to DICOM waveform objects*. **Release v1.3.0
-produced the results in that paper; v1.3.1 differs only in two code-meaning strings and in the
-documentation.** MIT License.
+produced the results in that paper; v1.3.2 differs from it in the de-identification stage (the
+PS3.15 profile is recorded in each object, the Type 3 identity attributes are removed, and a
+per-patient date shift is available), in the patient identifier and age fields of the WFDB front
+end, in two code-meaning strings, and in the documentation. No attribute counted in the paper
+changes.** MIT License.
 
 ```
 pip install ecg2dcm            # add [philips] for Philips Sierra files, [validate] for dicom-validator
@@ -37,11 +40,17 @@ all groups) and what the two levels of validation do and do not check.
 
 ## De-identification
 
-On by default. Names and site identifiers become `Anonymized`, the patient ID
-becomes a per-run surrogate, dates keep year and month with the day set to 01,
-times become 00:00:00, and the birth date and free-text interpretation are
-dropped. See `docs/deidentification.md`. Pass `--keep-identity` to write the
-source values.
+On by default, implementing the Basic Application Level Confidentiality Profile
+of DICOM PS3.15 with the Clean Structured Content, Clean Descriptors, Retain
+Longitudinal Temporal Information with Modified Dates and Retain Patient
+Characteristics Options; each object records the profile and options in
+De-identification Method Code Sequence (0012,0064). Patient and referring
+physician names become `Anonymized`, the patient ID becomes a per-patient
+surrogate, institution, department, station and operator names are removed,
+dates keep year and month with the day set to 01 and times become 00:00:00 (or,
+with `--date-shift`, every date and time of a patient is shifted by one
+whole-day offset), and the birth date and free-text interpretation are dropped.
+See `docs/deidentification.md`. Pass `--keep-identity` to write the source values.
 
 ## Commands
 
@@ -49,7 +58,7 @@ source values.
 format from the content:
 
 ```
-ecg2dcm-convert path/to/files -o out/ --recursive [--uid-root 1.2.3.4] [--keep-identity]
+ecg2dcm-convert path/to/files -o out/ --recursive [--uid-root 1.2.3.4] [--keep-identity | --date-shift]
 ```
 
 **`ecg2dcm`** is the batch command used for the study corpus. It walks a
@@ -63,7 +72,9 @@ ecg2dcm --project_root . --data_root /data --ecg_xml_dir muse_xml --output_dir e
 ```
 
 `--out_filename_pattern` must contain exactly one `{...date...}` key and should
-contain `{seq}` (appended automatically otherwise).
+contain `{seq}` (appended automatically otherwise). Both commands write the
+surrogate table (`mrn_mapping_table.json`) next to the output unless
+`--keep-identity` is given; `--date-shift` adds each patient's date offset to it.
 
 **UID root.** Study, Series and SOP Instance UIDs are issued under `--uid-root`.
 The default is pydicom's registered root, a placeholder; issue UIDs under your

@@ -72,6 +72,18 @@ T_AXIS = Code('2:16136', 'MDC', 'T axis')                             # CID 3229
 P_WAVE = Code('10:256', 'MDC', 'P wave')                              # CID 3335
 
 # (attribute, concept, unit, governing context group or template, source field)
+# CID 7050 "De-identification Method" (PS3.16): the profile and the options that the
+# de-identification stage implements (PS3.15 Annex E, docs/deidentification.md).
+# Written to De-identification Method Code Sequence (0012,0064) of every
+# de-identified object, as PS3.15 Section E.1.1 requires.
+DEID_BASIC_PROFILE = Code('113100', 'DCM', 'Basic Application Confidentiality Profile')
+DEID_CLEAN_STRUCTURED_CONTENT = Code('113104', 'DCM', 'Clean Structured Content Option')
+DEID_CLEAN_DESCRIPTORS = Code('113105', 'DCM', 'Clean Descriptors Option')
+DEID_RETAIN_MODIFIED_DATES = Code('113107', 'DCM', 'Retain Longitudinal Temporal Information Modified Dates Option')
+DEID_RETAIN_PATIENT_CHARACTERISTICS = Code('113108', 'DCM', 'Retain Patient Characteristics Option')
+DEID_METHOD_CODES = (DEID_BASIC_PROFILE, DEID_CLEAN_STRUCTURED_CONTENT, DEID_CLEAN_DESCRIPTORS,
+                     DEID_RETAIN_MODIFIED_DATES, DEID_RETAIN_PATIENT_CHARACTERISTICS)
+
 CODED_VALUES = [
     ('Channel Source Sequence (003A,0208)', CID_3001_ECG_LEAD['I'], None, 'CID 3001 ECG Lead (DCID, PS3.3 A.34.4.4.5)', 'lead I'),
     ('Channel Source Sequence (003A,0208)', CID_3001_ECG_LEAD['II'], None, 'CID 3001', 'lead II'),
@@ -103,4 +115,9 @@ CODED_VALUES = [
     ('Waveform Annotation, measurement units', UNIT_BEATS_PER_MINUTE, None, 'CID 82', 'rates'),
     ('Waveform Annotation, measurement units', UNIT_MILLISECOND, None, 'CID 82', 'intervals'),
     ('Waveform Annotation, measurement units', UNIT_DEGREE, None, 'CID 82', 'axes'),
+    ('De-identification Method Code Sequence (0012,0064)', DEID_BASIC_PROFILE, None, 'CID 7050 De-identification Method', 'de-identification: profile'),
+    ('De-identification Method Code Sequence (0012,0064)', DEID_CLEAN_STRUCTURED_CONTENT, None, 'CID 7050', 'de-identification: option'),
+    ('De-identification Method Code Sequence (0012,0064)', DEID_CLEAN_DESCRIPTORS, None, 'CID 7050', 'de-identification: option'),
+    ('De-identification Method Code Sequence (0012,0064)', DEID_RETAIN_MODIFIED_DATES, None, 'CID 7050', 'de-identification: option'),
+    ('De-identification Method Code Sequence (0012,0064)', DEID_RETAIN_PATIENT_CHARACTERISTICS, None, 'CID 7050', 'de-identification: option'),
 ]

@@ -2,6 +2,46 @@
 
 All notable changes to ecg2dcm. Dates are ISO 8601.
 
+## 1.3.2 - 2026-10-26
+
+De-identification stated and recorded in terms of DICOM PS3.15; no change to any
+attribute counted in the reported results (the Type 1 and Type 2 attributes of
+the mandatory modules) or to any code value.
+
+### Changed
+- The rule set is now documented as the Basic Application Level Confidentiality
+  Profile of PS3.15 with the Clean Structured Content, Clean Descriptors, Retain
+  Longitudinal Temporal Information with Modified Dates and Retain Patient
+  Characteristics Options (`docs/deidentification.md` gives the Table E.1-1 action
+  for every attribute).
+- The four Type 3 identity attributes, Institution Name, Institutional Department
+  Name, Station Name and Operators' Name, are removed instead of being overwritten
+  with `Anonymized` (Table E.1-1 marks them X).
+- Every de-identified object carries Patient Identity Removed (0012,0062) = YES,
+  De-identification Method (0012,0063), De-identification Method Code Sequence
+  (0012,0064) with the five CID 7050 codes, and Longitudinal Temporal Information
+  Modified (0028,0303) = MODIFIED; `codes.CODED_VALUES` and
+  `docs/mapping/coded_values.csv` list the five codes.
+- Study Description is the fixed string `12-Lead ECG` in every de-identified object,
+  whatever the adapter or caller supplied.
+- Both commands assign one surrogate Patient ID per source patient and write the
+  surrogate table (`ecg2dcm.surrogates`); `ecg2dcm-convert` previously numbered
+  surrogates per file and wrote no table.
+
+### Added
+- `--date-shift` (both commands) and `build(..., date_shift_days=)`: dates and times
+  of a patient are shifted together by one whole-day offset drawn once per patient
+  (one to ten years into the past) instead of being aggregated to the month, so
+  that the intervals between a patient's records survive; the offset is kept in
+  the surrogate table.
+
+### Fixed
+- WFDB front end: the age comment was stored in a field the writer never read, so
+  Patient's Age was not written for WFDB records; it is now.
+- WFDB front end: a `subject_id` (or `patient_id`) header comment, as MIMIC-IV-ECG
+  carries, is used as the patient identifier instead of the record name.
+- Example DICOM files regenerated with 1.3.2.
+
 ## 1.3.1 - 2026-09-12
 
 Documentation and code-meaning alignment with PS3.16; no change to any code value, attribute,
@@ -16,8 +56,8 @@ or conversion outcome. Objects written by 1.3.0 and 1.3.1 differ only in the two
 
 ## 1.3.0 - 2026-09-11
 
-Corrections found during peer review of CMPB-D-25-07854, and the multi-format
-front ends used for its external evaluation.
+Corrections found during peer review of the accompanying manuscript, and the
+multi-format front ends used for its external evaluation.
 
 ### Changed
 - **SOP Class is now General ECG Waveform Storage** (1.2.840.10008.5.1.4.1.1.9.1.2).
@@ -61,7 +101,7 @@ front ends used for its external evaluation.
 ## 1.2.0 - 2026-09-08
 
 First release under the name `ecg2dcm`, on GitHub with an MIT license.
-Corrections to 1.1.10 reported in the revision of CMPB-D-25-07854:
+Corrections to 1.1.10 reported in the revision of the accompanying manuscript:
 
 - Channel Source Sequence coded from CID 3001 (MDC) instead of LOINC lead names.
 - Filter Low/High Frequency assigned to the correct pass-band edges, with

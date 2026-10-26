@@ -29,3 +29,8 @@ Attribute,Code Value,Coding Scheme Designator,Code Meaning,Units (code),Governin
 "Waveform Annotation, measurement units",{H.B.}/min,UCUM,BPM,,CID 82,rates
 "Waveform Annotation, measurement units",ms,UCUM,millisecond,,CID 82,intervals
 "Waveform Annotation, measurement units",deg,UCUM,degree,,CID 82,axes
+"De-identification Method Code Sequence (0012,0064)",113100,DCM,Basic Application Confidentiality Profile,,CID 7050 De-identification Method,de-identification: profile
+"De-identification Method Code Sequence (0012,0064)",113104,DCM,Clean Structured Content Option,,CID 7050,de-identification: option
+"De-identification Method Code Sequence (0012,0064)",113105,DCM,Clean Descriptors Option,,CID 7050,de-identification: option
+"De-identification Method Code Sequence (0012,0064)",113107,DCM,Retain Longitudinal Temporal Information Modified Dates Option,,CID 7050,de-identification: option
+"De-identification Method Code Sequence (0012,0064)",113108,DCM,Retain Patient Characteristics Option,,CID 7050,de-identification: option

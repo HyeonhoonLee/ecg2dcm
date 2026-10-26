@@ -7,7 +7,10 @@ import xml.etree.ElementTree as ET
 import pydicom
 import pytest
 
-from ecg2dcm import build, check_iod_constraints, codes, parse, sniff
+from ecg2dcm import __version__, build, check_iod_constraints, codes, parse, sniff
+from ecg2dcm.surrogates import SurrogateTable
+from ecg2dcm.adapters import wfdb
+import numpy as np
 from ecg2dcm.adapters import muse
 from ecg2dcm.writer import _ds
 
@@ -41,8 +44,17 @@ def test_muse_example_converts_and_conforms(path):
     assert ds.PatientBirthDate == ''
     assert ds.StudyDate.endswith('01') and ds.StudyTime == '000000'
     assert ds.AcquisitionDateTime.endswith('01000000')
-    assert ds.InstitutionName == 'Anonymized'
+    for tag in ('InstitutionName', 'InstitutionalDepartmentName', 'StationName', 'OperatorsName'):
+        assert tag not in ds                       # Type 3 identity attributes are removed (PS3.15 Table E.1-1: X)
+    assert str(ds.ReferringPhysicianName) == 'Anonymized'
+    assert ds.StudyDescription == '12-Lead ECG'
     assert not any(a.get('UnformattedTextValue') for a in ds.WaveformAnnotationSequence)
+    # the object records the profile and options (PS3.15 E.1.1 item 6, E.3.6)
+    assert ds.PatientIdentityRemoved == 'YES'
+    assert ds.LongitudinalTemporalInformationModified == 'MODIFIED'
+    assert ds.DeidentificationMethod == f'ecg2dcm {__version__}: dates aggregated to month'
+    assert [c.CodeValue for c in ds.DeidentificationMethodCodeSequence] == ['113100', '113104', '113105', '113107', '113108']
+    assert all(c.CodingSchemeDesignator == 'DCM' for c in ds.DeidentificationMethodCodeSequence)
 
 
 def test_fiducials_become_sample_positions_of_the_median_group():
@@ -68,6 +80,8 @@ def test_fiducials_become_sample_positions_of_the_median_group():
 
 def test_keep_identity_writes_source_values():
     ds = build(parse(SYNTH), deidentify_record=False)
+    assert 'PatientIdentityRemoved' not in ds and 'DeidentificationMethodCodeSequence' not in ds
+    assert 'LongitudinalTemporalInformationModified' not in ds
     assert str(ds.PatientName) == 'Synthetic^Example'
     assert ds.PatientID == 'SYNTH0001'
     assert ds.StudyDate == '20250817' and ds.StudyTime == '091511'
@@ -131,3 +145,47 @@ def test_written_file_reads_back():
     finally:
         if os.path.exists(out):
             os.remove(out)
+
+
+def test_date_shift_preserves_intervals_and_time_of_day():
+    rec = parse(SYNTH)                                   # 2025-08-17 09:15:11
+    ds = build(rec, date_shift_days=-400)
+    assert ds.StudyDate == '20240713' and ds.StudyTime == '091511'
+    assert ds.AcquisitionDateTime == '20240713091511'
+    assert ds.DeidentificationMethod == f'ecg2dcm {__version__}: dates shifted per patient'
+    later = parse(SYNTH)
+    later.acquisition_date = '20250820'                  # three days later, same patient, same offset
+    ds2 = build(later, date_shift_days=-400)
+    from datetime import datetime
+    delta = datetime.strptime(ds2.StudyDate, '%Y%m%d') - datetime.strptime(ds.StudyDate, '%Y%m%d')
+    assert delta.days == 3
+
+
+def test_surrogate_table_is_per_patient():
+    t = SurrogateTable(date_shift=True)
+    s1, o1 = t.lookup('P1', 'file:1')
+    s2, o2 = t.lookup('P2', 'file:2')
+    s1b, o1b = t.lookup('P1', 'file:3')
+    assert (s1, o1) == (s1b, o1b) and s1 != s2
+    assert -3650 <= o1 <= -365
+    a, _ = t.lookup('', 'file:4'); b, _ = t.lookup('', 'file:5')
+    assert a != b                                        # records without a patient identifier never share a surrogate
+    t.record('in.xml', 'out.dcm', 'P1', s1, o1)
+    assert t.rows['in.xml'] == {'mrn': s1, 'original_mrn': 'P1', 'date_offset_days': o1, 'ecg_dicom_file': 'out.dcm'}
+
+
+def test_wfdb_subject_id_and_age_are_read(tmp_path):
+    n = 10
+    data = np.zeros((n, 2), dtype='<i2'); data[:, 0] = np.arange(n); data[:, 1] = -np.arange(n)
+    (tmp_path / 'rec1.dat').write_bytes(data.tobytes())
+    (tmp_path / 'rec1.hea').write_text(
+        'rec1 2 500 10 08:44:00 23/07/2180\n'
+        'rec1.dat 16 200.0(0)/mV 16 0 0 0 0 I\n'
+        'rec1.dat 16 200.0(0)/mV 16 0 0 0 0 II\n'
+        '# <subject_id>: 10000032\n# <age>: 51\n# <sex>: F\n')
+    rec = wfdb.parse(str(tmp_path / 'rec1.hea'))
+    assert rec.patient_id == '10000032' and rec.age_value == 51 and rec.sex == 'F'
+    ds = build(rec, deidentify_record=False)
+    assert ds.PatientID == '10000032' and ds.PatientAge == '051Y' and ds.PatientSex == 'F'
+    ds = build(rec)
+    assert ds.PatientAge == '051Y' and ds.PatientID == '000001'

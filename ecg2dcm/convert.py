@@ -3,7 +3,9 @@
 Formats are detected from the file content: GE MUSE, GE CardioSoft, Philips
 Sierra, HL7 aECG, Mortara ELI Link, Schiller SEMA and WFDB (``.hea``). Each
 input becomes one DICOM General ECG Waveform Storage object named after the
-input's stem. Objects are de-identified unless ``--keep-identity`` is given.
+input's stem. Objects are de-identified unless ``--keep-identity`` is given, with
+one surrogate Patient ID per source patient and, with ``--date-shift``, one date
+offset per patient; the surrogate table is written next to the output.
 """
 import argparse
 import os
@@ -12,6 +14,8 @@ from pathlib import Path
 
 from . import codes
 from .adapters.dispatch import parse, sniff
+from .surrogates import SurrogateTable
+from .utils import save_mrn_map_table
 from .writer import build
 
 _EXT = ('.xml', '.hea')
@@ -37,21 +41,31 @@ def main(argv=None):
     ap.add_argument('--uid-root', dest='uid_root', default=codes.DEFAULT_UID_ROOT)
     ap.add_argument('--keep-identity', dest='keep_identity', action='store_true')
     ap.add_argument('--start-index', type=int, default=1, help='first Instance Number / surrogate ID')
+    ap.add_argument('--date-shift', dest='date_shift', action='store_true',
+                    help='de-identify dates by one whole-day offset per patient instead of aggregating them to the month')
     a = ap.parse_args(argv)
+    table = SurrogateTable(date_shift=a.date_shift)
     os.makedirs(a.out, exist_ok=True)
     n_ok = n_fail = 0
     for i, f in enumerate(_inputs(a.paths, a.recursive), start=a.start_index):
         try:
             name, _ = sniff(f)
             rec = parse(f)
-            ds = build(rec, index=i, deidentify_record=not a.keep_identity, uid_root=a.uid_root)
             out = Path(a.out) / (f.stem + '.dcm')
+            if a.keep_identity:
+                ds = build(rec, index=i, deidentify_record=False, uid_root=a.uid_root)
+            else:
+                surrogate, offset = table.lookup(rec.patient_id, f'file:{i}')
+                ds = build(rec, index=i, patient_id=surrogate, uid_root=a.uid_root, date_shift_days=offset)
+                table.record(f.name, out.name, rec.patient_id, surrogate, offset)
             ds.save_as(str(out), write_like_original=False)
             n_ok += 1
             print(f'{f} [{name}] -> {out}')
         except Exception as e:
             n_fail += 1
             print(f'{f}: refused: {e}', file=sys.stderr)
+    if not a.keep_identity and table.rows:
+        save_mrn_map_table(table.rows, a.out)
     print(f'{n_ok} converted, {n_fail} refused')
     return 0 if n_fail == 0 else 1
 
