@@ -3,7 +3,7 @@
 Formats are detected from the file content: GE MUSE, GE CardioSoft, Philips
 Sierra, HL7 aECG, Mortara ELI Link, Schiller SEMA and WFDB (``.hea``). Each
 input becomes one DICOM General ECG Waveform Storage object named after the
-input's stem. Objects are de-identified unless ``--keep-identity`` is given, with
+input's stem, with numeric suffixes for colliding names. Objects are de-identified unless ``--keep-identity`` is given, with
 one surrogate Patient ID per source patient and, with ``--date-shift``, one date
 offset per patient; the surrogate table is written next to the output.
 """
@@ -15,13 +15,22 @@ from pathlib import Path
 from . import codes
 from .adapters.dispatch import parse, sniff
 from .surrogates import SurrogateTable
-from .utils import save_mrn_map_table
+from .utils import fresh_output_directory, save_mrn_map_table
 from .writer import build
 
 _EXT = ('.xml', '.hea')
 
 
 def _inputs(paths, recursive):
+    seen = set()
+    for f in _input_files(paths, recursive):
+        key = f.resolve()
+        if key not in seen:
+            seen.add(key)
+            yield f
+
+
+def _input_files(paths, recursive):
     for p in paths:
         p = Path(p)
         if p.is_dir():
@@ -44,7 +53,17 @@ def main(argv=None):
     ap.add_argument('--date-shift', dest='date_shift', action='store_true',
                     help='de-identify dates by one whole-day offset per patient instead of aggregating them to the month')
     a = ap.parse_args(argv)
-    table = SurrogateTable(date_shift=a.date_shift)
+    if a.start_index < 1:
+        ap.error("--start-index must be a positive integer")
+    try:
+        with fresh_output_directory(a.out):
+            return _run_conversion(a)
+    except FileExistsError as exc:
+        ap.error(str(exc))
+
+
+def _run_conversion(a):
+    table = SurrogateTable(date_shift=a.date_shift, start_index=a.start_index)
     os.makedirs(a.out, exist_ok=True)
     n_ok = n_fail = 0
     for i, f in enumerate(_inputs(a.paths, a.recursive), start=a.start_index):
@@ -52,13 +71,18 @@ def main(argv=None):
             name, _ = sniff(f)
             rec = parse(f)
             out = Path(a.out) / (f.stem + '.dcm')
+            suffix = 2
+            while out.exists():
+                out = Path(a.out) / f'{f.stem}_{suffix}.dcm'
+                suffix += 1
             if a.keep_identity:
                 ds = build(rec, index=i, deidentify_record=False, uid_root=a.uid_root)
             else:
                 surrogate, offset = table.lookup(rec.patient_id, f'file:{i}')
                 ds = build(rec, index=i, patient_id=surrogate, uid_root=a.uid_root, date_shift_days=offset)
-                table.record(f.name, out.name, rec.patient_id, surrogate, offset)
             ds.save_as(str(out), write_like_original=False)
+            if not a.keep_identity:
+                table.record(str(f.resolve()), out.name, rec.patient_id, surrogate, offset)
             n_ok += 1
             print(f'{f} [{name}] -> {out}')
         except Exception as e:

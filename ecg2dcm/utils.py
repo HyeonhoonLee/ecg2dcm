@@ -1,7 +1,9 @@
 """File helpers for the batch command-line tool."""
 import json
 import os
+from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 
 
 def get_all_files_recursive(path, ext=None, exclude=None):
@@ -38,3 +40,29 @@ def save_mrn_map_table(target_dict, target_path=None):
         json.dump(target_dict, fh, ensure_ascii=False, indent=1)
     print(f'MRN mapping table saved to {name}')
     return name
+
+
+@contextmanager
+def fresh_output_directory(target_path):
+    """Reserve an empty output directory for exactly one conversion run.
+
+    Patient surrogates and date offsets belong to one run. Reusing an output
+    directory would mix unrelated mapping namespaces, so refuse before writing
+    any objects. Exclusive creation of the marker also prevents two commands
+    from both accepting the same empty directory.
+    """
+    target = Path(target_path)
+    target.mkdir(parents=True, exist_ok=True)
+    marker = target / '.ecg2dcm-run.lock'
+    message = 'Output directory is occupied or in use; choose a new empty output directory.'
+    try:
+        fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise FileExistsError(message) from None
+    try:
+        if any(entry.name != marker.name for entry in target.iterdir()):
+            raise FileExistsError(message)
+        yield target
+    finally:
+        os.close(fd)
+        marker.unlink()

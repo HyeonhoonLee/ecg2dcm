@@ -2,11 +2,14 @@
 
 All notable changes to ecg2dcm. Dates are ISO 8601.
 
-## 1.3.2 - 2026-10-26
+## 1.3.2 - 2026-11-03
 
-De-identification stated and recorded in terms of DICOM PS3.15; no change to any
-attribute counted in the reported results (the Type 1 and Type 2 attributes of
-the mandatory modules) or to any code value.
+De-identification stated and recorded in terms of DICOM PS3.15. The set of 32
+unconditionally required attributes counted in the manuscript is unchanged,
+but Patient ID and date/time values can differ under the revised handling.
+The original study results were obtained with v1.3.0; the five public WFDB
+datasets were revalidated with v1.3.2 using the default date rule. Existing
+code values are unchanged.
 
 ### Changed
 - The rule set is now documented as the Basic Application Level Confidentiality
@@ -16,7 +19,7 @@ the mandatory modules) or to any code value.
   for every attribute).
 - The four Type 3 identity attributes, Institution Name, Institutional Department
   Name, Station Name and Operators' Name, are removed instead of being overwritten
-  with `Anonymized` (Table E.1-1 marks them X).
+  with `Anonymized`, following their Table E.1-1 actions.
 - Every de-identified object carries Patient Identity Removed (0012,0062) = YES,
   De-identification Method (0012,0063), De-identification Method Code Sequence
   (0012,0064) with the five CID 7050 codes, and Longitudinal Temporal Information
@@ -36,6 +39,12 @@ the mandatory modules) or to any code value.
   the surrogate table.
 
 ### Fixed
+- Existing output directories are refused before conversion; `--start-index`
+  sets the first patient surrogate as well as the first Instance Number.
+- Unknown Multiplex Group Labels are omitted during de-identification.
+- Mapping rows use unique input path keys, repeated paths are processed once,
+  and colliding output file names receive numeric suffixes instead of being
+  overwritten. Rows are recorded after the object is saved.
 - WFDB front end: the age comment was stored in a field the writer never read, so
   Patient's Age was not written for WFDB records; it is now.
 - WFDB front end: a `subject_id` (or `patient_id`) header comment, as MIMIC-IV-ECG

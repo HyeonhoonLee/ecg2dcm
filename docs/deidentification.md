@@ -18,8 +18,9 @@ IOD, with four of its options:
 - **Clean Structured Content Option** (113104): the Acquisition Context Sequence and
   the Waveform Annotation Sequence are kept with their coded items only.
 - **Clean Descriptors Option** (113105): Study Description, Multiplex Group Label
-  and Channel Derivation Description are written from a fixed vocabulary; the
-  free-text diagnosis statement is not written.
+  and Channel Derivation Description are written from a fixed vocabulary.
+  Multiplex Group Label is retained only as `Rhythm` or `Median`; unknown labels
+  are omitted. The free-text diagnosis statement is not written.
 
 Every de-identified object records this in Patient Identity Removed (0012,0062)
 = `YES`, De-identification Method (0012,0063) (release and date rule),
@@ -49,7 +50,7 @@ Modified (0028,0303) = `MODIFIED`.
 | Study, Series, SOP Instance UID | 1 | U | – (Retain UIDs not applied) | generated under `--uid-root` (in either mode) | |
 | Acquisition Context Sequence (0040,0555) | 2 | X/Z | Clean Structured Content (C) | kept: coded lead system and patient state only | |
 | Waveform Annotation Sequence (0040,B020) | 1 (conditional module) | X/D | Clean Structured Content (C) | kept with the coded measurement items; the free-text item (Unformatted Text Value (0070,0006): D, Clean Descriptors C) is not written | `NORMAL SINUS RHYTHM` → (not written) |
-| Multiplex Group Label (003A,0020) | 3 | X | Clean Descriptors (C) | fixed vocabulary (`Rhythm`, `Median`) | |
+| Multiplex Group Label (003A,0020) | 3 | X | Clean Descriptors (C) | fixed vocabulary (`Rhythm`, `Median`); unknown labels omitted | |
 | Channel Derivation Description (003A,020C) | 3 | X | Clean Descriptors (C) | fixed string naming the source leads | |
 
 Attributes of the IOD that Table E.1-1 does not list (Manufacturer, Manufacturer's
@@ -70,3 +71,18 @@ UIDs are generated afresh under the configured root (`--uid-root`) and carry
 no source information. The de-identification profile does not by itself
 guarantee that an object carries no identifying information (PS3.15 Annex E); it
 is one part of a governed de-identification process.
+
+
+Each command requires a new or empty output directory and refuses an occupied
+or concurrently used directory before conversion begins. All records intended
+to share patient surrogates and date offsets must be converted together in one
+run. An existing mapping table is not loaded for a later run. For
+`ecg2dcm-convert`, `--start-index` sets both the first Instance Number and the
+first allocated patient surrogate; repeated records of a patient reuse that
+patient's surrogate and date offset within the run.
+
+The MUSE command keys mapping rows by the input path relative to the input
+root and records the output path relative to the output root. The multi-format
+command uses resolved input paths as keys, processes a repeated input path
+once, and adds numeric suffixes to colliding output file names. A mapping row
+is recorded only after the object has been saved.

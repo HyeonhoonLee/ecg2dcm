@@ -21,7 +21,7 @@ from tqdm import tqdm
 from . import codes
 from .adapters import muse
 from .surrogates import SurrogateTable
-from .utils import get_all_files_recursive, save_mrn_map_table, set_dcm_save_path
+from .utils import fresh_output_directory, get_all_files_recursive, save_mrn_map_table, set_dcm_save_path
 from .writer import build
 
 
@@ -47,6 +47,12 @@ def convert_one(xml_path, out_path, index, table, keep_identity=False, uid_root=
 def run_conversion(args):
     if isinstance(args, dict):
         args = argparse.Namespace(**args)
+    out_root = Path(args.project_root) / args.output_dir
+    with fresh_output_directory(out_root):
+        return _run_conversion(args)
+
+
+def _run_conversion(args):
     project_root = Path(args.project_root)
     root_xml_path = Path(args.data_root) / args.ecg_xml_dir
     out_root = project_root / args.output_dir
@@ -91,7 +97,9 @@ def run_conversion(args):
             continue
         n_ok += 1
         if not args.keep_identity:
-            table.record(Path(xml).name, Path(out_path).name, source_id, surrogate, offset)
+            table.record(Path(xml).relative_to(root_xml_path).as_posix(),
+                         Path(out_path).relative_to(out_root).as_posix(),
+                         source_id, surrogate, offset)
     if not args.keep_identity:
         os.makedirs(out_root, exist_ok=True)
         save_mrn_map_table(table.rows, str(out_root))
@@ -121,8 +129,12 @@ def build_parser():
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
-    run_conversion(args)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        run_conversion(args)
+    except FileExistsError as exc:
+        parser.error(str(exc))
 
 
 if __name__ == '__main__':

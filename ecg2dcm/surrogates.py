@@ -20,25 +20,32 @@ SHIFT_RANGE_DAYS = (-3650, -365)     # one to ten years into the past, drawn onc
 
 
 class SurrogateTable:
-    def __init__(self, date_shift: bool = False, rng: Optional[random.Random] = None):
+    def __init__(self, date_shift: bool = False, rng: Optional[random.Random] = None,
+                 *, start_index: int = 1):
+        if isinstance(start_index, bool) or not isinstance(start_index, int) or start_index < 1:
+            raise ValueError("start_index must be a positive integer")
+        self._next_index = start_index
         self.date_shift = date_shift
         self._rng = rng or random.SystemRandom()
-        self._by_source: Dict[str, Tuple[str, Optional[int]]] = {}
+        self._by_source: Dict[Tuple[str, str], Tuple[str, Optional[int]]] = {}
         self.rows: Dict[str, dict] = {}
 
     def lookup(self, source_id: Optional[str], fallback_key: str) -> Tuple[str, Optional[int]]:
         """Surrogate and offset for a source patient; a record without a patient
         identifier is keyed by ``fallback_key`` so that unrelated records never share one."""
-        key = source_id if source_id else fallback_key
+        key = ('patient', source_id) if source_id else ('record', fallback_key)
         hit = self._by_source.get(key)
         if hit is None:
-            surrogate = f'{len(self._by_source) + 1:06d}'
+            surrogate = f'{self._next_index:06d}'
+            self._next_index += 1
             offset = self._rng.randint(*SHIFT_RANGE_DAYS) if self.date_shift else None
             hit = self._by_source[key] = (surrogate, offset)
         return hit
 
     def record(self, input_name: str, output_name: str, source_id: Optional[str],
                surrogate: str, offset: Optional[int]) -> None:
+        if input_name in self.rows:
+            raise ValueError('An input path already has a mapping; use a unique input path key.')
         row = {'mrn': surrogate, 'original_mrn': source_id or ''}
         if self.date_shift:
             row['date_offset_days'] = offset

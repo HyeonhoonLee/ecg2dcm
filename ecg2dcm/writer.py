@@ -217,10 +217,17 @@ def build_annotations(rec: EcgRecord) -> Sequence:
 
 
 # --------------------------------------------------------------------------- waveform groups
-def _waveform_item(w) -> Dataset:
+def _waveform_item(w, *, clean_descriptors: bool = False) -> Dataset:
     item = Dataset()
     item.WaveformOriginality = w.originality
-    item.MultiplexGroupLabel = _lo(w.label, 16)
+    if clean_descriptors:
+        # PS3.15 Table E.1-1: C under Clean Descriptors. Only known-safe
+        # labels are retained; this Type 3 attribute is omitted otherwise.
+        label = {'rhythm': 'Rhythm', 'median': 'Median'}.get(str(w.label or '').strip().lower())
+    else:
+        label = _lo(w.label, 16)
+    if label is not None:
+        item.MultiplexGroupLabel = label
     n = min(len(v) for v in w.leads.values())
     item.NumberOfWaveformChannels = len(w.leads)
     item.NumberOfWaveformSamples = n
@@ -371,7 +378,7 @@ def build(rec: EcgRecord, *, index: int = 1, deidentify_record: bool = True,
     ds.AcquisitionContextSequence = Sequence([lead_sys, state])
 
     # Waveform
-    ds.WaveformSequence = Sequence([_waveform_item(w) for w in rec.waveforms])
+    ds.WaveformSequence = Sequence([_waveform_item(w, clean_descriptors=deidentify_record) for w in rec.waveforms])
 
     # Waveform Annotation (conditional module: present only when there is something to say)
     ann = build_annotations(rec)

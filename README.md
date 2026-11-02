@@ -5,12 +5,15 @@ objects: GE MUSE XML first, and also GE CardioSoft, Philips Sierra, HL7 aECG,
 Mortara ELI Link, Schiller SEMA and WFDB.
 
 This is the implementation reported in *ECG2DCM: An open-source framework for
-converting resting 12-lead electrocardiograms to DICOM waveform objects*. **Release v1.3.0
-produced the results in that paper; v1.3.2 differs from it in the de-identification stage (the
+converting resting 12-lead electrocardiograms to DICOM waveform objects*. **Release v1.3.2
+updates the de-identification stage (the
 PS3.15 profile is recorded in each object, the Type 3 identity attributes are removed, and a
-per-patient date shift is available), in the patient identifier and age fields of the WFDB front
-end, in two code-meaning strings, and in the documentation. No attribute counted in the paper
-changes.** MIT License.
+per-patient date shift is available), command-line output and mapping-table handling,
+the patient identifier and age fields of the WFDB front end, two code-meaning strings,
+and the documentation. The set of 32 unconditionally required attributes counted in the paper is unchanged,
+but Patient ID and date/time values can differ under the revised handling. The original
+study results were obtained with v1.3.0; the five public WFDB datasets were revalidated
+with v1.3.2 using the default date rule.** MIT License.
 
 ```
 pip install ecg2dcm            # add [philips] for Philips Sierra files, [validate] for dicom-validator
@@ -75,6 +78,13 @@ ecg2dcm --project_root . --data_root /data --ecg_xml_dir muse_xml --output_dir e
 contain `{seq}` (appended automatically otherwise). Both commands write the
 surrogate table (`mrn_mapping_table.json`) next to the output unless
 `--keep-identity` is given; `--date-shift` adds each patient's date offset to it.
+Both commands require a new or empty output directory. Convert all records
+that must share patient surrogates and date offsets together in one run.
+For `ecg2dcm-convert`, `--start-index` sets the first Instance Number and the
+first allocated patient surrogate. The MUSE command records input and output
+paths relative to their respective roots. The multi-format command records
+resolved input paths and appends a numeric suffix to colliding output names
+instead of overwriting an object; repeated input paths are processed once.
 
 **UID root.** Study, Series and SOP Instance UIDs are issued under `--uid-root`.
 The default is pydicom's registered root, a placeholder; issue UIDs under your
